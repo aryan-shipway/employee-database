@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add New Employee - Employee Database</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .header-section {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        .card {
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            border: none;
+        }
+        .form-label {
+            font-weight: 600;
+            color: #495057;
+        }
+        .required {
+            color: #dc3545;
+        }
+        .btn-back {
+            background-color: #6c757d;
+            border-color: #6c757d;
+            color: white;
+        }
+        .btn-back:hover {
+            background-color: #545b62;
+            border-color: #4e555b;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Section -->
+    <div class="header-section">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-8">
+                    <h1 class="display-5 mb-2">
+                        <i class="fas fa-user-plus me-3"></i>Add New Employee
+                    </h1>
+                    <p class="lead mb-0">Enter the details of the new employee</p>
+                </div>
+                <div class="col-md-4 text-end align-self-center">
+                    <button class="btn btn-light btn-lg" onclick="goBack()">
+                        <i class="fas fa-arrow-left me-2"></i>Back to List
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Alert Container -->
+        <div id="alertContainer"></div>
+
+        <!-- Add Employee Form -->
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-user-circle me-2"></i>Employee Information
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="employeeForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="firstName" class="form-label">
+                                        First Name <span class="required">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="firstName" name="firstName" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="lastName" class="form-label">
+                                        Last Name <span class="required">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="lastName" name="lastName" required>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="email" class="form-label">
+                                        Email Address <span class="required">*</span>
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-envelope"></i>
+                                        </span>
+                                        <input type="email" class="form-control" id="email" name="email" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="phone" class="form-label">Phone Number</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-phone"></i>
+                                        </span>
+                                        <input type="tel" class="form-control" id="phone" name="phone">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="department" class="form-label">
+                                        Department <span class="required">*</span>
+                                    </label>
+                                    <select class="form-select" id="department" name="department" required>
+                                        <option value="">Select Department</option>
+                                        <option value="IT">Information Technology</option>
+                                        <option value="HR">Human Resources</option>
+                                        <option value="Finance">Finance</option>
+                                        <option value="Marketing">Marketing</option>
+                                        <option value="Sales">Sales</option>
+                                        <option value="Operations">Operations</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="position" class="form-label">
+                                        Position <span class="required">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="position" name="position" required>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="salary" class="form-label">Salary</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-dollar-sign"></i>
+                                        </span>
+                                        <input type="number" class="form-control" id="salary" name="salary" min="0" step="0.01">
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="hireDate" class="form-label">Hire Date</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-calendar"></i>
+                                        </span>
+                                        <input type="date" class="form-control" id="hireDate" name="hireDate">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <button type="button" class="btn btn-back me-md-2" onclick="resetForm()">
+                                    <i class="fas fa-undo me-1"></i>Reset Form
+                                </button>
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="fas fa-plus me-2"></i>Add Employee
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let employees = [];
+        let nextId = 4;
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            loadEmployeesData();
+            
+            // Form submission handler
+            document.getElementById('employeeForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveEmployee();
+            });
+
+            // Set today's date as default hire date
+            document.getElementById('hireDate').value = new Date().toISOString().split('T')[0];
+        });
+
+        // Load employees data from localStorage
+        function loadEmployeesData() {
+            const storedData = localStorage.getItem('employeesData');
+            if (storedData) {
+                employees = JSON.parse(storedData);
+                nextId = Math.max(...employees.map(emp => emp.id), 0) + 1;
+            }
+        }
+
+        // Save new employee
+        function saveEmployee() {
+            const form = document.getElementById('employeeForm');
+            const formData = new FormData(form);
+            
+            const employeeData = {
+                firstName: formData.get('firstName').trim(),
+                lastName: formData.get('lastName').trim(),
+                email: formData.get('email').trim(),
+                phone: formData.get('phone').trim(),
+                department: formData.get('department'),
+                position: formData.get('position').trim(),
+                salary: formData.get('salary') ? parseFloat(formData.get('salary')) : null,
+                hireDate: formData.get('hireDate') || null
+            };
+
+            // Validation
+            if (!employeeData.firstName || !employeeData.lastName || !employeeData.email || 
+                !employeeData.department || !employeeData.position) {
+                showAlert('Please fill in all required fields.', 'danger');
+                return;
+            }
+
+            // Email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(employeeData.email)) {
+                showAlert('Please enter a valid email address.', 'danger');
+                return;
+            }
+
+            // Check for duplicate email
+            const existingEmployee = employees.find(emp => 
+                emp.email.toLowerCase() === employeeData.email.toLowerCase()
+            );
+            
+            if (existingEmployee) {
+                showAlert('An employee with this email already exists.', 'danger');
+                return;
+            }
+
+            // Create new employee
+            employeeData.id = nextId++;
+            employees.push(employeeData);
+
+            // Save to localStorage
+            localStorage.setItem('employeesData', JSON.stringify(employees));
+
+            showAlert('Employee added successfully!', 'success');
+            
+            // Reset form and scroll to top
+            setTimeout(() => {
+                resetForm();
+                window.scrollTo(0, 0);
+            }, 1500);
+        }
+
+        // Reset form
+        function resetForm() {
+            document.getElementById('employeeForm').reset();
+            document.getElementById('hireDate').value = new Date().toISOString().split('T')[0];
+        }
+
+        // Go back to main page
+        function goBack() {
+            window.close();
+        }
+
+        // Show alert messages
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            alertContainer.innerHTML = '';
+            alertContainer.appendChild(alertDiv);
+
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+
+        // Handle window closing
+        window.addEventListener('beforeunload', function() {
+            // Trigger storage event to refresh parent window
+            localStorage.setItem('employeesData', JSON.stringify(employees));
+        });
+    </script>
+</body>
+</html>
