@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -44,6 +43,13 @@
             padding: 1rem;
             margin-bottom: 1.5rem;
         }
+        .loading-btn {
+            pointer-events: none;
+        }
+        .loading-form {
+            text-align: center;
+            padding: 2rem;
+        }
     </style>
 </head>
 <body>
@@ -73,7 +79,7 @@
         <!-- Current Employee Info -->
         <div class="row justify-content-center">
             <div class="col-lg-8">
-                <div class="employee-info">
+                <div class="employee-info" id="employeeInfoCard" style="display: none;">
                     <div class="d-flex align-items-center">
                         <div class="bg-warning text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
                              style="width: 48px; height: 48px; font-size: 1.2rem;" id="employeeAvatar">
@@ -98,7 +104,14 @@
                         </h5>
                     </div>
                     <div class="card-body">
-                        <form id="employeeForm">
+                        <!-- Loading State -->
+                        <div id="loadingState" class="loading-form">
+                            <i class="fas fa-spinner fa-spin fa-2x mb-3 d-block"></i>
+                            Loading employee data...
+                        </div>
+
+                        <!-- Form -->
+                        <form id="employeeForm" style="display: none;">
                             <input type="hidden" id="employeeId" name="employeeId">
                             
                             <div class="row">
@@ -189,7 +202,7 @@
                                 <button type="button" class="btn btn-back me-md-2" onclick="cancelEdit()">
                                     <i class="fas fa-times me-1"></i>Cancel
                                 </button>
-                                <button type="submit" class="btn btn-warning btn-lg">
+                                <button type="submit" class="btn btn-warning btn-lg" id="submitBtn">
                                     <i class="fas fa-save me-2"></i>Update Employee
                                 </button>
                             </div>
@@ -202,12 +215,13 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
-        let employees = [];
+        // API base URL - Same as index.html
+        const API_BASE = 'http://localhost/employee-databse/api.php';
+        
         let currentEmployee = null;
 
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
-            loadEmployeesData();
             loadCurrentEmployee();
             
             // Form submission handler
@@ -217,29 +231,71 @@
             });
         });
 
-        // Load employees data from localStorage
-        function loadEmployeesData() {
-            const storedData = localStorage.getItem('employeesData');
-            if (storedData) {
-                employees = JSON.parse(storedData);
+        // Load current employee data from sessionStorage
+        async function loadCurrentEmployee() {
+            const employeeData = sessionStorage.getItem('editEmployeeData');
+            if (employeeData) {
+                try {
+                    currentEmployee = JSON.parse(employeeData);
+                    populateForm();
+                    updateEmployeeInfo();
+                    showForm();
+                    // Clear the temporary data
+                    sessionStorage.removeItem('editEmployeeData');
+                } catch (error) {
+                    console.error('Error parsing employee data:', error);
+                    showAlert('Invalid employee data. Redirecting...', 'danger');
+                    setTimeout(() => {
+                        window.close();
+                    }, 2000);
+                }
+            } else {
+                // Try to get employee ID from URL parameters as fallback
+                const urlParams = new URLSearchParams(window.location.search);
+                const employeeId = urlParams.get('id');
+                
+                if (employeeId) {
+                    await loadEmployeeFromAPI(employeeId);
+                } else {
+                    showAlert('No employee data found. Redirecting...', 'danger');
+                    setTimeout(() => {
+                        window.close();
+                    }, 2000);
+                }
             }
         }
 
-        // Load current employee data
-        function loadCurrentEmployee() {
-            const employeeData = localStorage.getItem('editEmployeeData');
-            if (employeeData) {
-                currentEmployee = JSON.parse(employeeData);
-                populateForm();
-                updateEmployeeInfo();
-                // Clear the temporary data
-                localStorage.removeItem('editEmployeeData');
-            } else {
-                showAlert('No employee data found. Redirecting...', 'danger');
+        // Load employee from API
+        async function loadEmployeeFromAPI(employeeId) {
+            try {
+                const response = await fetch(`${API_BASE}?action=employee&id=${employeeId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentEmployee = data.data;
+                    populateForm();
+                    updateEmployeeInfo();
+                    showForm();
+                } else {
+                    showAlert('Error loading employee data: ' + (data.error || 'Unknown error'), 'danger');
+                    setTimeout(() => {
+                        window.close();
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Failed to load employee data.', 'danger');
                 setTimeout(() => {
                     window.close();
                 }, 2000);
             }
+        }
+
+        // Show form and hide loading
+        function showForm() {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('employeeForm').style.display = 'block';
+            document.getElementById('employeeInfoCard').style.display = 'block';
         }
 
         // Populate form with current employee data
@@ -271,12 +327,12 @@
         }
 
         // Update employee
-        function updateEmployee() {
+        async function updateEmployee() {
             const form = document.getElementById('employeeForm');
             const formData = new FormData(form);
+            const submitBtn = document.getElementById('submitBtn');
             
             const employeeData = {
-                id: parseInt(formData.get('employeeId')),
                 firstName: formData.get('firstName').trim(),
                 lastName: formData.get('lastName').trim(),
                 email: formData.get('email').trim(),
@@ -287,51 +343,43 @@
                 hireDate: formData.get('hireDate') || null
             };
 
-            // Validation
+            // Client-side validation
             if (!employeeData.firstName || !employeeData.lastName || !employeeData.email || 
                 !employeeData.department || !employeeData.position) {
                 showAlert('Please fill in all required fields.', 'danger');
                 return;
             }
 
-            // Email validation
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(employeeData.email)) {
-                showAlert('Please enter a valid email address.', 'danger');
-                return;
-            }
+            // Show loading state
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Updating...';
+            submitBtn.classList.add('loading-btn');
 
-            // Check for duplicate email (exclude current employee)
-            const existingEmployee = employees.find(emp => 
-                emp.email.toLowerCase() === employeeData.email.toLowerCase() && 
-                emp.id !== employeeData.id
-            );
-            
-            if (existingEmployee) {
-                showAlert('An employee with this email already exists.', 'danger');
-                return;
-            }
+            try {
+                const response = await fetch(`${API_BASE}?action=employee&id=${currentEmployee.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(employeeData)
+                });
 
-            // Update employee in array
-            const index = employees.findIndex(emp => emp.id === employeeData.id);
-            if (index !== -1) {
-                employees[index] = employeeData;
-                
-                // Save to localStorage
-                localStorage.setItem('employeesData', JSON.stringify(employees));
-                
-                showAlert('Employee updated successfully!', 'success');
-                
-                // Update current employee and info display
-                currentEmployee = employeeData;
-                updateEmployeeInfo();
-                
-                // Close window after success
-                setTimeout(() => {
-                    window.close();
-                }, 2000);
-            } else {
-                showAlert('Employee not found in database.', 'danger');
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert('Employee updated successfully!', 'success');
+                    setTimeout(() => {
+                        window.close();
+                    }, 2000);
+                } else {
+                    throw new Error(result.error || 'Failed to update employee');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert(error.message, 'danger');
+            } finally {
+                // Reset button state
+                submitBtn.innerHTML = '<i class="fas fa-save me-2"></i>Update Employee';
+                submitBtn.classList.remove('loading-btn');
             }
         }
 
@@ -370,14 +418,6 @@
                 }
             }, 5000);
         }
-
-        // Handle window closing
-        window.addEventListener('beforeunload', function() {
-            // Trigger storage event to refresh parent window
-            if (employees.length > 0) {
-                localStorage.setItem('employeesData', JSON.stringify(employees));
-            }
-        });
     </script>
 </body>
 </html>

@@ -37,6 +37,9 @@
             border-color: #4e555b;
             color: white;
         }
+        .loading-btn {
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -162,7 +165,7 @@
                                 <button type="button" class="btn btn-back me-md-2" onclick="resetForm()">
                                     <i class="fas fa-undo me-1"></i>Reset Form
                                 </button>
-                                <button type="submit" class="btn btn-success btn-lg">
+                                <button type="submit" class="btn btn-success btn-lg" id="submitBtn">
                                     <i class="fas fa-plus me-2"></i>Add Employee
                                 </button>
                             </div>
@@ -175,13 +178,11 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
-        let employees = [];
-        let nextId = 4;
+        // API base URL - Same as index.html
+        const API_BASE = 'http://localhost/employee-databse/api.php';
 
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
-            loadEmployeesData();
-            
             // Form submission handler
             document.getElementById('employeeForm').addEventListener('submit', function(e) {
                 e.preventDefault();
@@ -192,69 +193,49 @@
             document.getElementById('hireDate').value = new Date().toISOString().split('T')[0];
         });
 
-        // Load employees data from localStorage
-        function loadEmployeesData() {
-            const storedData = localStorage.getItem('employeesData');
-            if (storedData) {
-                employees = JSON.parse(storedData);
-                nextId = Math.max(...employees.map(emp => emp.id), 0) + 1;
+        // Save new employee to database
+        async function saveEmployee() {
+            try {
+                const form = document.getElementById('employeeForm');
+                const formData = new FormData(form);
+                
+                const employeeData = {
+                    firstName: formData.get('firstName').trim(),
+                    lastName: formData.get('lastName').trim(),
+                    email: formData.get('email').trim(),
+                    phone: formData.get('phone').trim(),
+                    department: formData.get('department'),
+                    position: formData.get('position').trim(),
+                    salary: formData.get('salary') ? parseFloat(formData.get('salary')) : null,
+                    hireDate: formData.get('hireDate') || null
+                };
+
+                // Client-side validation
+                if (!employeeData.firstName || !employeeData.lastName || !employeeData.email || 
+                    !employeeData.department || !employeeData.position) {
+                    showAlert('Please fill in all required fields.', 'danger');
+                    return;
+                }
+
+                const response = await fetch(`${API_BASE}?action=employee`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(employeeData)
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('Employee added successfully!', 'success');
+                    form.reset();
+                } else {
+                    throw new Error(data.error || 'Failed to add employee');
+                }
+            } catch (error) {
+                showAlert(error.message, 'danger');
             }
-        }
-
-        // Save new employee
-        function saveEmployee() {
-            const form = document.getElementById('employeeForm');
-            const formData = new FormData(form);
-            
-            const employeeData = {
-                firstName: formData.get('firstName').trim(),
-                lastName: formData.get('lastName').trim(),
-                email: formData.get('email').trim(),
-                phone: formData.get('phone').trim(),
-                department: formData.get('department'),
-                position: formData.get('position').trim(),
-                salary: formData.get('salary') ? parseFloat(formData.get('salary')) : null,
-                hireDate: formData.get('hireDate') || null
-            };
-
-            // Validation
-            if (!employeeData.firstName || !employeeData.lastName || !employeeData.email || 
-                !employeeData.department || !employeeData.position) {
-                showAlert('Please fill in all required fields.', 'danger');
-                return;
-            }
-
-            // Email validation
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(employeeData.email)) {
-                showAlert('Please enter a valid email address.', 'danger');
-                return;
-            }
-
-            // Check for duplicate email
-            const existingEmployee = employees.find(emp => 
-                emp.email.toLowerCase() === employeeData.email.toLowerCase()
-            );
-            
-            if (existingEmployee) {
-                showAlert('An employee with this email already exists.', 'danger');
-                return;
-            }
-
-            // Create new employee
-            employeeData.id = nextId++;
-            employees.push(employeeData);
-
-            // Save to localStorage
-            localStorage.setItem('employeesData', JSON.stringify(employees));
-
-            showAlert('Employee added successfully!', 'success');
-            
-            // Reset form and scroll to top
-            setTimeout(() => {
-                resetForm();
-                window.scrollTo(0, 0);
-            }, 1500);
         }
 
         // Reset form
@@ -289,12 +270,6 @@
                 }
             }, 5000);
         }
-
-        // Handle window closing
-        window.addEventListener('beforeunload', function() {
-            // Trigger storage event to refresh parent window
-            localStorage.setItem('employeesData', JSON.stringify(employees));
-        });
     </script>
 </body>
 </html>

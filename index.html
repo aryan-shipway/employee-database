@@ -33,6 +33,10 @@
         .search-card {
             margin-bottom: 1.5rem;
         }
+        .loading {
+            text-align: center;
+            padding: 2rem;
+        }
     </style>
 </head>
 <body>
@@ -109,7 +113,12 @@
                             </tr>
                         </thead>
                         <tbody id="employeeTableBody">
-                            <!-- Employee data will be loaded here -->
+                            <tr>
+                                <td colspan="9" class="loading">
+                                    <i class="fas fa-spinner fa-spin fa-2x mb-3 d-block"></i>
+                                    Loading employees...
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -143,53 +152,20 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Sample employee data
-        let employees = [
-            {
-                id: 1,
-                firstName: 'John',
-                lastName: 'Doe',
-                email: 'john.doe@company.com',
-                phone: '+1-555-0123',
-                department: 'IT',
-                position: 'Software Developer',
-                salary: 75000,
-                hireDate: '2023-01-15'
-            },
-            {
-                id: 2,
-                firstName: 'Jane',
-                lastName: 'Smith',
-                email: 'jane.smith@company.com',
-                phone: '+1-555-0124',
-                department: 'HR',
-                position: 'HR Manager',
-                salary: 65000,
-                hireDate: '2022-08-20'
-            },
-            {
-                id: 3,
-                firstName: 'Mike',
-                lastName: 'Johnson',
-                email: 'mike.johnson@company.com',
-                phone: '+1-555-0125',
-                department: 'Finance',
-                position: 'Financial Analyst',
-                salary: 60000,
-                hireDate: '2023-03-10'
-            }
-        ];
-
+        // Make sure this matches your folder structure
+        const API_BASE = 'http://localhost/employee-databse/api.php';
+        
+        let employees = [];
         let deleteEmployeeId = null;
 
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
-            loadEmployees();
+            loadEmployeesFromDB();
             
             // Search input handler
             document.getElementById('searchInput').addEventListener('input', function() {
                 if (this.value.trim() === '') {
-                    showAllEmployees();
+                    loadEmployeesFromDB();
                 } else {
                     searchEmployees();
                 }
@@ -203,8 +179,46 @@
             });
         });
 
+        // Load employees from database
+        async function loadEmployeesFromDB(searchTerm = '') {
+            try {
+                showLoading();
+                const url = searchTerm ? 
+                    `${API_BASE}?action=employees&search=${encodeURIComponent(searchTerm)}` : 
+                    `${API_BASE}?action=employees`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.success) {
+                    employees = data.data;
+                    loadEmployees(employees);
+                } else {
+                    showAlert('Error loading employees: ' + (data.error || 'Unknown error'), 'danger');
+                    loadEmployees([]);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Failed to connect to database. Please check your connection.', 'danger');
+                loadEmployees([]);
+            }
+        }
+
+        // Show loading state
+        function showLoading() {
+            const tbody = document.getElementById('employeeTableBody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="loading">
+                        <i class="fas fa-spinner fa-spin fa-2x mb-3 d-block"></i>
+                        Loading employees...
+                    </td>
+                </tr>
+            `;
+        }
+
         // Load and display employees
-        function loadEmployees(employeeList = employees) {
+        function loadEmployees(employeeList) {
             const tbody = document.getElementById('employeeTableBody');
             const countBadge = document.getElementById('employeeCount');
             tbody.innerHTML = '';
@@ -255,7 +269,7 @@
                     <span class="badge bg-info">${employee.department}</span>
                 </td>
                 <td>${employee.position}</td>
-                <td>${employee.salary ? '<strong>$' + employee.salary.toLocaleString() + '</strong>' : '<span class="text-muted">N/A</span>'}</td>
+                <td>${employee.salary ? '<strong>$' + parseInt(employee.salary).toLocaleString() + '</strong>' : '<span class="text-muted">N/A</span>'}</td>
                 <td>${employee.hireDate ? new Date(employee.hireDate).toLocaleDateString() : '<span class="text-muted">N/A</span>'}</td>
                 <td>
                     <button class="btn btn-warning btn-action" onclick="openEditPage(${employee.id})" title="Edit Employee">
@@ -271,18 +285,25 @@
 
         // Open add employee page
         function openAddPage() {
-            // Store current employees data
-            localStorage.setItem('employeesData', JSON.stringify(employees));
             window.open('add-employee.html', '_blank');
         }
 
         // Open edit employee page
-        function openEditPage(id) {
-            const employee = employees.find(emp => emp.id === id);
-            if (employee) {
-                localStorage.setItem('employeesData', JSON.stringify(employees));
-                localStorage.setItem('editEmployeeData', JSON.stringify(employee));
-                window.open('edit-employee.html', '_blank');
+        async function openEditPage(id) {
+            try {
+                const response = await fetch(`${API_BASE}?action=employee&id=${id}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Store employee data temporarily
+                    sessionStorage.setItem('editEmployeeData', JSON.stringify(data.data));
+                    window.open('edit-employee.html', '_blank');
+                } else {
+                    showAlert('Error loading employee data: ' + (data.error || 'Unknown error'), 'danger');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Failed to load employee data.', 'danger');
             }
         }
 
@@ -294,14 +315,26 @@
         }
 
         // Confirm delete
-        function confirmDelete() {
+        async function confirmDelete() {
             if (deleteEmployeeId) {
-                const index = employees.findIndex(emp => emp.id === deleteEmployeeId);
-                if (index !== -1) {
-                    employees.splice(index, 1);
-                    showAlert('Employee deleted successfully!', 'success');
-                    loadEmployees();
+                try {
+                    const response = await fetch(`${API_BASE}?action=employee&id=${deleteEmployeeId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        showAlert('Employee deleted successfully!', 'success');
+                        loadEmployeesFromDB(); // Reload the list
+                    } else {
+                        showAlert('Error deleting employee: ' + (data.error || 'Unknown error'), 'danger');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showAlert('Failed to delete employee. Please try again.', 'danger');
                 }
+                
                 deleteEmployeeId = null;
                 bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
             }
@@ -309,27 +342,14 @@
 
         // Search employees
         function searchEmployees() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
-            if (!searchTerm) {
-                showAllEmployees();
-                return;
-            }
-
-            const filteredEmployees = employees.filter(employee => 
-                employee.firstName.toLowerCase().includes(searchTerm) ||
-                employee.lastName.toLowerCase().includes(searchTerm) ||
-                employee.email.toLowerCase().includes(searchTerm) ||
-                employee.department.toLowerCase().includes(searchTerm) ||
-                employee.position.toLowerCase().includes(searchTerm)
-            );
-
-            loadEmployees(filteredEmployees);
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            loadEmployeesFromDB(searchTerm);
         }
 
         // Show all employees
         function showAllEmployees() {
             document.getElementById('searchInput').value = '';
-            loadEmployees();
+            loadEmployeesFromDB();
         }
 
         // Show alert messages
@@ -354,21 +374,9 @@
             }, 5000);
         }
 
-        // Listen for updates from child windows
-        window.addEventListener('storage', function(e) {
-            if (e.key === 'employeesData') {
-                employees = JSON.parse(e.newValue);
-                loadEmployees();
-            }
-        });
-
         // Refresh data when window gains focus (for when child windows close)
         window.addEventListener('focus', function() {
-            const storedData = localStorage.getItem('employeesData');
-            if (storedData) {
-                employees = JSON.parse(storedData);
-                loadEmployees();
-            }
+            loadEmployeesFromDB();
         });
     </script>
 </body>
